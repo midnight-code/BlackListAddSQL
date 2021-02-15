@@ -18,6 +18,7 @@ namespace BlackListAddSQL
         public DbSet<Driver> Drivers { get; set; }
         public DbSet<FeedBack> feedBacks { get; set; }
         public DbSet<FsspCode> FsspCodes { get; set; }
+        public DbSet<ImagesBase> ImagesBases { get; set; }
 
     }
 }

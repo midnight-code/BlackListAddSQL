@@ -18,9 +18,6 @@ namespace BlackListAddSQL
         [Required]
         [Display(Name ="Фамилия")]
         public string FirstName { get; set; }
-
-
-
         [Column ("lastname")]
         public string LastName { get; set; }
         [Column ("secondname")]
@@ -35,5 +32,8 @@ namespace BlackListAddSQL
         public bool BlackList { get; set; }
         [Column ("avatar")]
         public int Avatar { get; set; }
+
+        [Column("datarogden")]
+        public DateTime Dataroden { get; set; }
     }
 }

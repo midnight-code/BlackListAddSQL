@@ -1,6 +1,7 @@
 ﻿using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
+using System.Drawing;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -16,7 +17,8 @@ namespace BlackListAddSQL
         private static string[] SerchText = new string[] { "в ч/с добавлен в г.", "фио водителя", "Дата рождения водителя", "Комментарий парка", "ч/с добавлен в г.", "г.", "г.р", "г.р.", "Дата рождения водителя:", "Дата рождения", "в ч/с добавлена в", "ч/с добавлен в", "ч/с добавлен в г", "в ч/с добавлен в г" };
         public static List<CityClass1> restoredPerson = new List<CityClass1>();
         public static PersonClass personClass;// = new PersonClass();
-        private static int Start = 0;
+        private static int Start = 1;
+        private static bool saveBaze = true;
         static void Main(string[] args)
         {
             if (Start == 1)
@@ -34,6 +36,7 @@ namespace BlackListAddSQL
                 #region Объявляем все переменные
                 string serchStart = "<div class=\"text\">";
                 string serchEnd = @"</div>";
+                string dateaddbkack= "<div class=\"pull_right date details\" title=\"";
                 int indexStart = 0;
                 int indexEnd = 0;
                 List<string> stroki = new List<string>();
@@ -45,7 +48,7 @@ namespace BlackListAddSQL
                 "e:\\messages3","e:\\messages4","e:\\messages5","e:\\messages6","e:\\messages7","e:\\messages8","e:\\messages9","e:\\messages10","e:\\messages11",
                 "e:\\messages12","e:\\messages13","e:\\messages14","e:\\messages15","e:\\messages16","e:\\messages17","e:\\messages18","e:\\messages19","e:\\messages20" };
 
-                for (int lenfail = 9; lenfail < failName.Length; lenfail++)
+                for (int lenfail = 0; lenfail < failName.Length; lenfail++)
                 {
                     personClasses = new List<PersonClass>();
                     #region Считываем и перебираем по заданным параметрам HTML файл
@@ -58,14 +61,61 @@ namespace BlackListAddSQL
                     for (int i = 0; i < html.Length; i++)
                     {
 
+                        Match match4=null;
                         indexStart = html.IndexOf(serchStart, indexStart);//ищем первое вхождение
                         if (indexStart < 0)
                             break;
 
                         indexEnd = html.IndexOf(serchEnd, indexStart);//Ищем второе вхождение
                         string test = html.Substring((indexStart + serchStart.Length), (indexEnd - indexStart - serchEnd.Length - 12)); //Определяем длину искомой подстроки.
-                        stroki.Add(test);
-                        indexStart = indexEnd + serchEnd.Length;
+
+                        /*Попробуем найти фото*/
+                        string serchfoto = "<a class=\"photo_wrap clearfix pull_left\" href=\"";
+                        string strokiadd = "";
+                        int indexfoto = indexStart + serchStart.Length;
+                        //if (i == 835) {
+                        //    i = i;
+                        //}
+                        int indexfotoend = html.IndexOf(serchStart, indexfoto);
+                        if (indexfotoend < 0)
+                            indexfotoend = html.Length;
+                        if (indexfoto > -1)
+                        {
+                            string htmltemp = html.Substring(indexStart, (indexfotoend - indexStart));
+                            string pathctemp;
+                            indexfoto = 0;
+                            
+                            int sta = 0;
+                            for (int f = 0; f < htmltemp.Length; f++)
+                            {
+
+                                indexfoto = htmltemp.IndexOf(serchfoto, sta);
+                                if (indexfoto > -1)
+                                {
+                                    pathctemp = htmltemp.Substring(indexfoto + serchfoto.Length - 1, serchfoto.Length + 35);
+                                    match4 = Regex.Match(pathctemp, "\".*\"");
+
+                                    strokiadd += match4.Value.Trim('"') + "+";
+                                    sta += indexfoto + serchfoto.Length + 35;
+                                }
+                                else
+                                    sta += serchfoto.Length + 35;
+                                if (sta > htmltemp.Length)
+                                    break;
+                            }
+                        }
+                        /*********************/
+                        int test1 = html.IndexOf(dateaddbkack, indexStart - 150);
+                        if (test1 > -1)
+                        {
+                            string date = html.Substring(test1, 200);
+                            Match match = Regex.Match(date, @"\d\d[.]\d\d[.]\d\d\d\d");
+                            string rezdate = match.Value;
+                            test += "dateaddblacklist:" + rezdate;
+                            test += " adresspatch:" + strokiadd;
+                            stroki.Add(test);
+                            indexStart = indexEnd + serchEnd.Length;
+                        }
                     }
                     reader.Close(); //закрываем поток
                     #endregion
@@ -113,6 +163,33 @@ namespace BlackListAddSQL
 
                         stroki = GetFIO(tempMasiv);
                         Array.Reverse(stroki.ToArray());
+                        List<string> newper = new List<string>();
+                        var hren = stroki.ToArray();
+                        for(int ii = 0; ii < hren.Count(); ii++)
+                        {
+                            string r = hren[ii];
+                            if (r.Split(':')[0] == "dateaddblacklist")
+                            {
+                                personClass.DateAddBlack = Convert.ToDateTime(r.Split(':')[1]);
+                                stroki.Remove(r);
+                            }
+                            if (r.Split(':')[0] == "adresspatch")
+                            {
+                                personClass.ImagePatch = r.Split(':')[1];
+                                stroki.Remove(r);
+                            }
+                        }
+
+
+
+
+
+
+                        foreach(string r in newper)
+                        {
+                            
+                        }
+
                         listStr = String.Join(" ", stroki);
 
                         listStr = GetFullCity(listStr);
@@ -139,11 +216,13 @@ namespace BlackListAddSQL
                         {
                             listStr = GetNewTempMassiv(listStr, personClass);
                         }
-
+                        Match match2 = Regex.Match(listStr, @"\d\d[.]\d\d[.]\d\d\d\d");
+                        string rr = match2.Value;
                         tempMasiv = listStr.Split(' ').Where(x => !string.IsNullOrWhiteSpace(x)).ToArray();
 
                         for (int i = 0; i < tempMasiv.Length; i++)
                         {
+
                             string tempStr = GetFIOFullInt(tempMasiv[i]);
                             if (i == 0)
                             {
@@ -158,7 +237,8 @@ namespace BlackListAddSQL
                             }
                             else
                             {
-                                personClass.Opisanie += tempStr + " ";
+                               
+                                    personClass.Opisanie += tempStr + " ";
                             }
                         }
                         if (personClass.FirstName == "" || personClass.FirstName == null)
@@ -168,146 +248,240 @@ namespace BlackListAddSQL
                         }
                         else
                         {
+                            
                             personClasses.Add(personClass);
 
                         }
                     }
                     #endregion
-                    //Console.WriteLine("**********************Выводим полученный список*********************************************************************");
-                    //foreach (var item in personClasses)
-                    //{
-                    //    Console.WriteLine("{0}***{1}***{2}***{3}***{4}***{5}***{6}", item.ID, item.FirstName, item.LastName, item.SecondName, item.City, item.DateTimes, item.Opisanie);
-                    //    Console.WriteLine("____________________________________________________________________________________________________________________");
-                    //    if (item.DateTimes.Year == 0001 || item.DateTimes.Year == 1001)
-                    //    {
-                    //        Console.ReadLine();
-                    //    }
-                    //    if (item.ID == 2592)
-                    //    {
-                    //        Console.ReadLine();
-                    //    }
-                    //}
+                    Console.WriteLine("**********************Выводим полученный список*********************************************************************");
+                    foreach (var item in personClasses)
+                    {
+                        Console.WriteLine("{0}***{1}***{2}***{3}***{4}***{5}***{6}***{7}***{8}", item.ID, item.FirstName, item.LastName, item.SecondName, item.City, item.DateTimes, item.DateAddBlack, item.ImagePatch, item.Opisanie);
+                        Console.WriteLine("____________________________________________________________________________________________________________________");
+                        if (item.DateTimes.Year == 0001 || item.DateTimes.Year == 1001)
+                        {
+                            Console.ReadLine();
+                        }
+                        //if (item.ID == 2592)
+                        //{
+                        //    Console.ReadLine();
+                        //}
+                    }
 
-                    ////Console.WriteLine("Нажмите педаль для записи в базу");
+                    //Console.WriteLine("Нажмите педаль для записи в базу");
                     //Console.ReadLine();
-                    //Console.Clear();
+                    Console.Clear();
                     Console.WriteLine("*****************_____Пишем в базу_______{0}_____******************************************", failName[lenfail]);
 
 
 
 
                     Console.CursorVisible = false;
-                    #region Записываем полученный результат в базу
-                    int procent = personClasses.Count;
-                    using (var dbcontext = new MyDbContext())
+
+                    if (saveBaze == true)
                     {
-                        for (int i = 0; i < personClasses.Count; i++)
+                        #region Записываем полученный результат в базу
+                        int procent = personClasses.Count;
+                        using (MyDbContext dbcontext = new MyDbContext())
                         {
-                            Driver driver = new Driver();
-                            driver.Avatar = 1;
-                            driver.BlackList = true;
-                            driver.DriverslicenseID = 1;
-                            driver.FirstName = personClasses[i].FirstName;
-                            driver.LastName = personClasses[i].LastName;
-                            driver.SecondName = personClasses[i].SecondName;
-                            driver.PassportID = 1;
-                            driver.INN = 0;
+                            for (int i = 0; i < personClasses.Count; i++)
+                            {
+                                Driver driver = new Driver();
+                                driver.Avatar = 1;
+                                driver.BlackList = true;
+                                driver.DriverslicenseID = 1;
+                                driver.FirstName = personClasses[i].FirstName;
+                                driver.LastName = personClasses[i].LastName;
+                                driver.SecondName = personClasses[i].SecondName;
+                                driver.PassportID = 1;
+                                driver.INN = 0;
+                                driver.Dataroden = personClasses[i].DateTimes;
 
-                            dbcontext.Drivers.Add(driver);
-                            dbcontext.SaveChanges();
-                            int id = driver.ID;
+                                dbcontext.Drivers.Add(driver);
+                                dbcontext.SaveChanges();
+                                int id = driver.ID;
 
-                            FeedBack feedBack = new FeedBack();
-                            feedBack.DriverID = id;
-                            feedBack.TaxiPoolID = 1;
-                            feedBack.Subjest = personClasses[i].Opisanie;
-                            feedBack.DateADD = personClasses[i].DateTimes;
+                                FeedBack feedBack = new FeedBack();
+                                feedBack.DriverID = id;
+                                feedBack.TaxiPoolID = 1;
+                                feedBack.Subjest = personClasses[i].Opisanie;
+                                feedBack.DateADD = personClasses[i].DateAddBlack;
 
-                            string cit = personClasses[i].City;
+                                string cit = personClasses[i].City;
 
-                            var users = (from user in dbcontext.GetCityNames
-                                         where user.Name == cit
-                                         select user).ToList();
-                            feedBack.CityID = users[0].ID;
+                                var users = (from user in dbcontext.GetCityNames
+                                             where user.Name == cit
+                                             select user).ToList();
+                                feedBack.CityID = users[0].ID;
 
-                            dbcontext.feedBacks.Add(feedBack);
-                            dbcontext.SaveChanges();
+                                dbcontext.feedBacks.Add(feedBack);
+                                dbcontext.SaveChanges();
 
-                            if (i < procent / 4)
-                                Console.ForegroundColor = ConsoleColor.Red;
-                            else if (i < procent / 2)
-                                Console.ForegroundColor = ConsoleColor.DarkRed;
-                            else if (i < ((procent / 4) + (procent / 2)))
-                                Console.ForegroundColor = ConsoleColor.DarkYellow;
-                            else if (i < procent)
-                                Console.ForegroundColor = ConsoleColor.Yellow;
-                            else
-                                Console.ForegroundColor = ConsoleColor.Green;
+                                ImagesBase imagesBase = new ImagesBase();
+                                string[] massivPatch = personClasses[i].ImagePatch.Split('+');
+                                string[] result = massivPatch.Where(x => !string.IsNullOrWhiteSpace(x)).ToArray();
+                                for(int fi = 0; fi < result.Count(); fi++)
+                                {
+                                    string[] file = result[fi].Split('/');
+                                    string newpatch = @"E:";
+                                    foreach (string r in file) {
+                                        r.Trim('\"');
+                                        newpatch += "\\"+ r;
+                                    }
+                                    string miniimg = "";
+                                    file = newpatch.Split('.');
+                                    miniimg = file[0] + "_thumb." + file[1];
 
-                            string pct = string.Format("{0,-30} {1,3}%", new string((char)0x2592, i * (procent / 100) / 100), i);
-                            Console.CursorLeft = 0;
-                            Console.Write(pct);
+                                    string iFile = newpatch;
+                                    byte[] imageData = null;
+                                    FileInfo fInfo = new FileInfo(iFile);
+                                    long numBytes = fInfo.Length;
+                                    FileStream fStream = new FileStream(iFile, FileMode.Open, FileAccess.Read);
+                                    BinaryReader br = new BinaryReader(fStream);
+                                    imageData = br.ReadBytes((int)numBytes);
+                                    // получение расширения файла изображения не забыв удалить точку перед расширением
+                                    string iImageExtension = (Path.GetExtension(iFile)).Replace(".", "").ToLower();
+                                    imagesBase = new ImagesBase { DriverID = id, ScreenImage = imageData, ScreenFormat = iImageExtension };
+                                    dbcontext.ImagesBases.Add(imagesBase);
+                                    dbcontext.SaveChanges();
+
+
+                                    iFile = miniimg;
+                                    imageData = null;
+                                    fInfo = new FileInfo(iFile);
+                                    numBytes = fInfo.Length;
+                                    fStream = new FileStream(iFile, FileMode.Open, FileAccess.Read);
+                                    br = new BinaryReader(fStream);
+                                    imageData = br.ReadBytes((int)numBytes);
+                                    // получение расширения файла изображения не забыв удалить точку перед расширением
+                                    iImageExtension = (Path.GetExtension(iFile)).Replace(".", "").ToLower();
+                                    imagesBase = new ImagesBase { DriverID = id, ScreenImage = imageData, ScreenFormat = iImageExtension };
+                                    dbcontext.ImagesBases.Add(imagesBase);
+                                    dbcontext.SaveChanges();
+                                }
+
+
+                                
+
+
+
+
+
+
+
+                                if (i < procent / 4)
+                                    Console.ForegroundColor = ConsoleColor.Red;
+                                else if (i < procent / 2)
+                                    Console.ForegroundColor = ConsoleColor.DarkRed;
+                                else if (i < ((procent / 4) + (procent / 2)))
+                                    Console.ForegroundColor = ConsoleColor.DarkYellow;
+                                else if (i < procent)
+                                    Console.ForegroundColor = ConsoleColor.Yellow;
+                                else
+                                    Console.ForegroundColor = ConsoleColor.Green;
+
+                                string pct = string.Format("{0,-30} {1,3}%", new string((char)0x2592, i * (procent / 100) / 100), i);
+                                Console.CursorLeft = 0;
+                                Console.Write(pct);
+                            }
                         }
+
+
+                        //Console.WriteLine("**********************Выводим полученный бред*********************************************************************");
+                        //foreach (var item in bredList)
+                        //{
+                        //    Console.WriteLine(item);
+                        //}
+                        //Console.WriteLine("записей в базу не вошло {0}", bredList.Count);
+
+                        //Console.ReadLine();
+                        #endregion
                     }
-
-
-                    //Console.WriteLine("**********************Выводим полученный бред*********************************************************************");
-                    //foreach (var item in bredList)
-                    //{
-                    //    Console.WriteLine(item);
-                    //}
-                    //Console.WriteLine("записей в базу не вошло {0}", bredList.Count);
-
-                    //Console.ReadLine();
-                    #endregion
                 }
                 Console.WriteLine("Запись завершена. Благодарю за терпение!");
 
                 Console.ReadLine();
             }
 
-
-            #region Запись для приставов
-            string jsonrez = "";
-            using (FileStream fstr = new FileStream("e:\\region.txt", FileMode.OpenOrCreate))
+            if (Start == 2)
             {
-                StreamReader streamReader = new StreamReader(fstr);
-                jsonrez = streamReader.ReadToEnd();
+                #region Запись для приставов
+                string jsonrez = "";
+                using (FileStream fstr = new FileStream("e:\\region.txt", FileMode.OpenOrCreate))
+                {
+                    StreamReader streamReader = new StreamReader(fstr);
+                    jsonrez = streamReader.ReadToEnd();
+                }
+
+                string[] masivfsspcode = jsonrez.Split('\n');
+                //for(int i = 0; i < masivfsspcode.Length; i++)
+                //{
+                //".*?"
+                //}
+                List<FsspCode> fsspCodes = new List<FsspCode>();
+                foreach (string r in masivfsspcode)
+                {
+
+                    if (r != "" && r != " ")
+                    {
+                        Match match = Regex.Match(r, @".*");
+                        var fssp = match.ToString().Split(',');
+                        fsspCodes.Add(new FsspCode { Regumber = Convert.ToInt32(fssp[0]), Name = fssp[1].Trim('"') });
+                    }
+                }
+                using (var dbcontext = new MyDbContext())
+                {
+                    foreach (FsspCode code in fsspCodes)
+                    {
+                        dbcontext.FsspCodes.Add(code);
+                        dbcontext.SaveChanges();
+                    }
+                }
+
+                foreach (var re in fsspCodes)
+                {
+                    Console.WriteLine($"{re.ID}*****{re.Name}");
+                }
+
+
+                Console.ReadLine();
+                #endregion
             }
 
-            string[] masivfsspcode = jsonrez.Split('\n');
-            //for(int i = 0; i < masivfsspcode.Length; i++)
+
+
+
+            //string iFile = @"E:\\photo_8.jpg";
+            //byte[] imageData = null;
+            //FileInfo fInfo = new FileInfo(iFile);
+            //long numBytes = fInfo.Length;
+            //FileStream fStream = new FileStream(iFile, FileMode.Open, FileAccess.Read);
+            //BinaryReader br = new BinaryReader(fStream);
+            //imageData = br.ReadBytes((int)numBytes);
+            //// получение расширения файла изображения не забыв удалить точку перед расширением
+            //string iImageExtension = (Path.GetExtension(iFile)).Replace(".", "").ToLower();
+            //ImagesBase imagesBase = new ImagesBase { DriverID = 1, ScreenImage=imageData, ScreenFormat=iImageExtension };
+
+            //using (var dbcontext = new MyDbContext())
             //{
-            //".*?"
+            //    dbcontext.ImagesBases.Add(imagesBase);
+            //    dbcontext.SaveChanges();
             //}
-            List<FsspCode> fsspCodes = new List<FsspCode>();
-            foreach(string r in masivfsspcode)
-            {
-                
-                if (r != "" && r != " ")
-                {
-                    Match match = Regex.Match(r, @".*");
-                    var fssp = match.ToString().Split(',');
-                    fsspCodes.Add(new FsspCode { Regumber = Convert.ToInt32(fssp[0]), Name = fssp[1].Trim('"') });
-                }
-            }
-            using (var dbcontext = new MyDbContext())
-            {
-                foreach (FsspCode code in fsspCodes)
-                {
-                    dbcontext.FsspCodes.Add(code);
-                    dbcontext.SaveChanges();
-                }
-            }
+            //using (var dbcontext = new MyDbContext())
+            //{
+            //    ImagesBase imagesBase1 = (ImagesBase)dbcontext.ImagesBases.Where(p => p.DriverID == 1);
+            //    MemoryStream memoryStream = new MemoryStream((byte[])imagesBase1.ScreenImage);
+            //    Image image = Image.FromStream(memoryStream);
 
-            foreach(var re in fsspCodes)
-            {
-                Console.WriteLine($"{re.ID}*****{re.Name}");
-            }
+            //}
 
-            
-            Console.ReadLine();
-            #endregion
+            List<string> strki = new List<string>();
+
+            //strki.Add( );
+
+
+
         }
 
 

@@ -13,10 +13,12 @@ namespace BlackListAddSQL
         public string LastName { get; set; }
         public string SecondName { get; set; }
         public DateTime DateTimes { get; set; }
+        public DateTime DateAddBlack { get; set; }
         public string City { get; set; }
         public string Opisanie { get; set; }
         public string DriversLicenz { get; set; }
         public string Phone { get; set; }
+        public string ImagePatch { get; set; }
 
     }
 }

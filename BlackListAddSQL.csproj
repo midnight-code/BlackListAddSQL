@@ -65,6 +65,7 @@
     <Compile Include="Driver.cs" />
     <Compile Include="FeedBack.cs" />
     <Compile Include="FsspCode.cs" />
+    <Compile Include="ImagesBase.cs" />
     <Compile Include="MyDbContext.cs" />
     <Compile Include="PersonClass.cs" />
     <Compile Include="Program.cs" />
