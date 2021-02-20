@@ -7,16 +7,16 @@ using System.Threading.Tasks;
 
 namespace BlackListAddSQL
 {
-    [Table("dt_ImageDoc")]
-    public class ImagesBase
+    [Table("dt_ImagUrl")]
+    public class ImgUrl
     {
         [Column("id")]
         public int ID { get; set; }
         [Column("driver_id")]
         public int DriverID { get; set; }
-        [Column("screen")]
-        public byte[] ScreenImage { get; set; }
-        [Column("screen_format")]
-        public string ScreenFormat { get; set; }
+        [Column("img_url")]
+        public string ImagesUrl { get; set; }
+        [Column("thumb")]
+        public bool Thumb { get; set; } = false;
     }
 }

@@ -21,11 +21,12 @@ namespace BlackListAddSQL
         private static bool saveBaze = true;
         static void Main(string[] args)
         {
+            
             if (Start == 1)
             {
                 #region
                 //Console.WriteLine("Читаем файл городов");
-                using (FileStream fs = new FileStream("e:\\russian-cities.json", FileMode.OpenOrCreate))
+                using (FileStream fs = new FileStream("f:\\russian-cities.json", FileMode.OpenOrCreate))
                 {
                     StreamReader streamReader = new StreamReader(fs);
                     string json = streamReader.ReadToEnd();
@@ -44,9 +45,9 @@ namespace BlackListAddSQL
                 List<string> bredList = new List<string>();
                 #endregion
 
-                string[] failName = new string[] { "e:\\messages", "e:\\messages2",
-                "e:\\messages3","e:\\messages4","e:\\messages5","e:\\messages6","e:\\messages7","e:\\messages8","e:\\messages9","e:\\messages10","e:\\messages11",
-                "e:\\messages12","e:\\messages13","e:\\messages14","e:\\messages15","e:\\messages16","e:\\messages17","e:\\messages18","e:\\messages19","e:\\messages20" };
+                string[] failName = new string[] { "f:\\messages", "f:\\messages2",
+                "f:\\messages3","f:\\messages4","f:\\messages5","f:\\messages6","f:\\messages7","f:\\messages8","f:\\messages9","f:\\messages10","f:\\messages11",
+                "f:\\messages12","f:\\messages13","f:\\messages14","f:\\messages15","f:\\messages16","f:\\messages17","f:\\messages18","f:\\messages19","f:\\messages20" };
 
                 for (int lenfail = 0; lenfail < failName.Length; lenfail++)
                 {
@@ -318,57 +319,44 @@ namespace BlackListAddSQL
                                 dbcontext.feedBacks.Add(feedBack);
                                 dbcontext.SaveChanges();
 
-                                ImagesBase imagesBase = new ImagesBase();
+                                ImgUrl imgUrl = new ImgUrl();
                                 string[] massivPatch = personClasses[i].ImagePatch.Split('+');
                                 string[] result = massivPatch.Where(x => !string.IsNullOrWhiteSpace(x)).ToArray();
                                 for(int fi = 0; fi < result.Count(); fi++)
                                 {
                                     string[] file = result[fi].Split('/');
-                                    string newpatch = @"E:";
+                                    string newpatch = @"F:";
                                     foreach (string r in file) {
                                         r.Trim('\"');
                                         newpatch += "\\"+ r;
                                     }
-                                    string miniimg = "";
-                                    file = newpatch.Split('.');
-                                    miniimg = file[0] + "_thumb." + file[1];
+                                    FileInfo fileInfo = new FileInfo(newpatch);
+                                    string[] finfo = fileInfo.Name.Split('.');
+                                    string minifile = $"{fileInfo.DirectoryName}\\{finfo[0]}_thumb.{finfo[1]}";
+                                    string newdate = $"bl_{DateTime.Now.DayOfYear}" + DateTime.Now.ToString("hhmmss");
+                                    string niFile = $"F:\\PhotoSite\\{newdate}{Path.GetExtension(newpatch)}";
 
-                                    string iFile = newpatch;
-                                    byte[] imageData = null;
-                                    FileInfo fInfo = new FileInfo(iFile);
-                                    long numBytes = fInfo.Length;
-                                    FileStream fStream = new FileStream(iFile, FileMode.Open, FileAccess.Read);
-                                    BinaryReader br = new BinaryReader(fStream);
-                                    imageData = br.ReadBytes((int)numBytes);
-                                    // получение расширения файла изображения не забыв удалить точку перед расширением
-                                    string iImageExtension = (Path.GetExtension(iFile)).Replace(".", "").ToLower();
-                                    imagesBase = new ImagesBase { DriverID = id, ScreenImage = imageData, ScreenFormat = iImageExtension };
-                                    dbcontext.ImagesBases.Add(imagesBase);
+                                    Image image=Image.FromFile(newpatch);
+                                    image.Save(niFile);
+
+                                    imgUrl.DriverID = driver.ID;
+                                    imgUrl.ImagesUrl = $"{newdate}{Path.GetExtension(newpatch)}";
+                                    imgUrl.Thumb = false;
+                                    dbcontext.imgUrls.Add(imgUrl);
                                     dbcontext.SaveChanges();
 
+                                    //FileStream mini_fStream = new FileStream(minifile, FileMode.Open, FileAccess.Read);
+                                    Image mini_image = Image.FromFile(minifile);
+                                    niFile = $"F:\\PhotoSite\\{newdate}_thumb{Path.GetExtension(newpatch)}";
+                                    mini_image.Save(niFile);
 
-                                    iFile = miniimg;
-                                    imageData = null;
-                                    fInfo = new FileInfo(iFile);
-                                    numBytes = fInfo.Length;
-                                    fStream = new FileStream(iFile, FileMode.Open, FileAccess.Read);
-                                    br = new BinaryReader(fStream);
-                                    imageData = br.ReadBytes((int)numBytes);
-                                    // получение расширения файла изображения не забыв удалить точку перед расширением
-                                    iImageExtension = (Path.GetExtension(iFile)).Replace(".", "").ToLower();
-                                    imagesBase = new ImagesBase { DriverID = id, ScreenImage = imageData, ScreenFormat = iImageExtension };
-                                    dbcontext.ImagesBases.Add(imagesBase);
+                                    imgUrl.DriverID = driver.ID;
+                                    imgUrl.ImagesUrl = $"{newdate}_thumb{Path.GetExtension(newpatch)}";
+                                    imgUrl.Thumb = true;
+                                    dbcontext.imgUrls.Add(imgUrl);
                                     dbcontext.SaveChanges();
+
                                 }
-
-
-                                
-
-
-
-
-
-
 
                                 if (i < procent / 4)
                                     Console.ForegroundColor = ConsoleColor.Red;
